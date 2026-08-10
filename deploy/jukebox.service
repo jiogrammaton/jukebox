@@ -1,0 +1,20 @@
+[Unit]
+Description=RFID Spotify Jukebox
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=jukebox
+Group=jukebox
+WorkingDirectory=/home/jukebox/spotify
+EnvironmentFile=/home/jukebox/spotify/.env
+Environment="PATH=/home/jukebox/spotify/.venv/bin:/usr/local/bin:/usr/bin"
+ExecStart=/home/jukebox/spotify/.venv/bin/python /home/jukebox/spotify/jukebox.py --rfid
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
