@@ -67,9 +67,16 @@ def setup_logging(log_dir: Path | None = None) -> logging.Logger:
     console_handler.setFormatter(formatter)
     logger.addHandler(console_handler)
 
-    logger.info("Logging to %s", scan_log)
+    logger.debug("Writing logs to %s", scan_log)
     _logger = logger
     return logger
+
+
+def flush_logs() -> None:
+    if _logger is None:
+        return
+    for handler in _logger.handlers:
+        handler.flush()
 
 
 def get_logger() -> logging.Logger:

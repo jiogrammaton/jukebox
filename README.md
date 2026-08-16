@@ -100,7 +100,8 @@ journalctl -u jukebox -b --no-pager
 
 Common issues:
 
-- **redirect_uri: Insecure** — update `.env` to `http://127.0.0.1:8888/callback` and add the same URI in your Spotify app settings. Do not use `localhost` or `https://localhost`.
+- **Repeating log lines with no error** — the service is crash-looping before errors were flushed to disk. Pull the latest code; failures now log `Jukebox service failed to start:` with a full traceback in `scan.log`. Also confirm `.cache` exists after reinstall.
+- **redirect_uri issues** — `SPOTIPY_REDIRECT_URI` must match your Spotify app settings exactly (including `http` vs `https` and trailing slash). Do not use `localhost`; use `127.0.0.1`.
 - **Invalid authorization code** — you pasted the sign-in URL instead of the redirect URL. Paste the URL from your browser after approving access (`http://127.0.0.1:8888/callback?code=...`).
 - **Service exits immediately** — the service must pass `--rfid`. Without it the script prints a usage message and exits.
 - **Spotify auth fails** — ensure `.env` exists and `.cache` is present. If the refresh token expired, run `python jukebox.py --reauth`.

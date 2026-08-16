@@ -62,11 +62,21 @@ def discard_token_cache(cache_path: Path) -> None:
         print(f"Discarded stored Spotify token: {cache_path}")
 
 
+def _validate_redirect_uri(redirect_uri: str) -> str:
+    if "localhost" in redirect_uri:
+        raise RuntimeError(
+            "SPOTIPY_REDIRECT_URI cannot use localhost. "
+            "Use 127.0.0.1 and add the exact same URI in your Spotify app settings."
+        )
+
+    return redirect_uri
+
+
 def _require_credentials() -> tuple[str, str, str]:
     client_id = os.environ.get("SPOTIPY_CLIENT_ID")
     client_secret = os.environ.get("SPOTIPY_CLIENT_SECRET")
     redirect_uri = os.environ.get(
-        "SPOTIPY_REDIRECT_URI", "http://127.0.0.1:8888/callback"
+        "SPOTIPY_REDIRECT_URI", "https://127.0.0.1:8888/callback/"
     )
 
     if not client_id or not client_secret:
@@ -75,13 +85,7 @@ def _require_credentials() -> tuple[str, str, str]:
             "(see .env.example)"
         )
 
-    if "localhost" in redirect_uri:
-        raise RuntimeError(
-            "SPOTIPY_REDIRECT_URI cannot use localhost. "
-            "Use http://127.0.0.1:8888/callback and add the same URI in your "
-            "Spotify app settings."
-        )
-
+    redirect_uri = _validate_redirect_uri(redirect_uri)
     return client_id, client_secret, redirect_uri
 
 

@@ -1,6 +1,7 @@
 import argparse
 import random
 import re
+import sys
 from pathlib import Path
 from time import sleep
 
@@ -8,7 +9,7 @@ from mfrc522 import SimpleMFRC522
 import RPi.GPIO as GPIO
 from spotipy.exceptions import SpotifyException
 
-from logger import setup_logging
+from logger import flush_logs, setup_logging
 from rfid_mapping import RFID_MAPPING
 from spotify_auth import REAUTH_COMMAND, create_session
 
@@ -36,11 +37,18 @@ parser.add_argument(
 )
 args = parser.parse_args()
 
-session = create_session(
-    APP_DIR,
-    force_reauth=args.reauth,
-    interactive=None if not args.reauth else True,
-)
+_session = None
+
+
+def get_session():
+    global _session
+    if _session is None:
+        _session = create_session(
+            APP_DIR,
+            force_reauth=args.reauth,
+            interactive=None if not args.reauth else True,
+        )
+    return _session
 
 
 def normalize_spotify_uri(value: str) -> str:
@@ -72,7 +80,7 @@ def uri_kind(uri: str) -> str:
 
 
 def get_active_device_id():
-    devices = session.call(lambda sp: sp.devices())
+    devices = get_session().call(lambda sp: sp.devices())
     if not devices["devices"]:
         return None
 
@@ -119,7 +127,7 @@ def play_song(track_uri):
     track_id = track_uri.rsplit(":", maxsplit=1)[-1]
 
     try:
-        session.call(
+        get_session().call(
             lambda sp: sp.start_playback(
                 uris=[track_uri],
                 device_id=device_id,
@@ -131,9 +139,9 @@ def play_song(track_uri):
         log.warning("Direct track playback failed: %s", exc)
 
     try:
-        track = session.call(lambda sp: sp.track(track_id))
+        track = get_session().call(lambda sp: sp.track(track_id))
         album_uri = track["album"]["uri"]
-        session.call(
+        get_session().call(
             lambda sp: sp.start_playback(
                 context_uri=album_uri,
                 offset={"uri": track_uri},
@@ -151,32 +159,32 @@ def play_song(track_uri):
 
 def play_playlist(playlist_uri):
     if check_active_device():
-        playlist_tracks = session.call(lambda sp: sp.playlist_tracks(playlist_uri))
+        playlist_tracks = get_session().call(lambda sp: sp.playlist_tracks(playlist_uri))
         track_uris = [item["track"]["uri"] for item in playlist_tracks["items"]]
-        session.call(lambda sp: sp.shuffle(state=False))
+        get_session().call(lambda sp: sp.shuffle(state=False))
 
         if args.random:
-            session.call(lambda sp: sp.shuffle(state=True))
+            get_session().call(lambda sp: sp.shuffle(state=True))
             log.info("Shuffle mode enabled.")
             random_track_uri = random.choice(track_uris)
             log.info("Random track selected: %s", random_track_uri)
-            session.call(lambda sp: sp.start_playback(context_uri=playlist_uri))
+            get_session().call(lambda sp: sp.start_playback(context_uri=playlist_uri))
             log.info("Playing playlist: %s starting from a random track", playlist_uri)
         else:
             log.info("Shuffle mode disabled.")
-            session.call(lambda sp: sp.start_playback(context_uri=playlist_uri))
+            get_session().call(lambda sp: sp.start_playback(context_uri=playlist_uri))
             log.info("Playing playlist: %s starting from the first track", playlist_uri)
 
 
 def enable_shuffle():
     if check_active_device():
-        session.call(lambda sp: sp.shuffle(state=True))
+        get_session().call(lambda sp: sp.shuffle(state=True))
         print("Shuffle mode enabled for subsequent tracks.")
 
 
 def search_song(song, artist):
     query = f"track:{song} artist:{artist}"
-    results = session.call(lambda sp: sp.search(q=query, limit=1))
+    results = get_session().call(lambda sp: sp.search(q=query, limit=1))
 
     if results["tracks"]["items"]:
         track = results["tracks"]["items"][0]
@@ -192,7 +200,7 @@ def search_song(song, artist):
 def search_playlist(playlist_name_or_id):
     try:
         print(f"Attempting to fetch playlist by ID: {playlist_name_or_id}")
-        playlist = session.call(lambda sp: sp.playlist(playlist_name_or_id))
+        playlist = get_session().call(lambda sp: sp.playlist(playlist_name_or_id))
 
         if not args.play:
             print(f"Displaying tracks for playlist: {playlist['name']}")
@@ -203,7 +211,7 @@ def search_playlist(playlist_name_or_id):
         print(f"Error fetching playlist by ID: {e}")
         print(f"Attempting to search for playlist by name: {playlist_name_or_id}")
 
-        playlists = session.call(lambda sp: sp.current_user_playlists())
+        playlists = get_session().call(lambda sp: sp.current_user_playlists())
         matched_playlists = [
             playlist
             for playlist in playlists["items"]
@@ -222,12 +230,21 @@ def search_playlist(playlist_name_or_id):
 
 
 def display_playlist_tracks(playlist_id):
-    results = session.call(lambda sp: sp.playlist_tracks(playlist_id))
+    results = get_session().call(lambda sp: sp.playlist_tracks(playlist_id))
 
     for idx, item in enumerate(results["items"]):
         track = item["track"]
         print(f"{idx + 1}. ", end="")
         display_track_info(track)
+
+
+def fail_service(message: str, exc: BaseException | None = None) -> None:
+    if exc is not None:
+        log.exception(message)
+    else:
+        log.error(message)
+    flush_logs()
+    sys.exit(1)
 
 
 def run_rfid_loop():
@@ -270,29 +287,45 @@ def run_rfid_loop():
     except KeyboardInterrupt:
         log.info("Exiting RFID jukebox.")
     except Exception as e:
-        log.exception("Unhandled error: %s", e)
-        raise
+        fail_service(f"RFID loop crashed: {e}", e)
     finally:
         GPIO.cleanup()
 
 
-if __name__ == "__main__":
-    if args.reauth:
-        print("Spotify re-authentication complete.")
-    elif args.rfid:
-        run_rfid_loop()
-    elif args.song and args.artist:
-        search_song(args.song, args.artist)
-    elif args.track:
-        if args.play:
-            play_song(args.track)
+def main() -> None:
+    mode = "rfid" if args.rfid else "cli"
+    log.info("Jukebox service starting (mode=%s)", mode)
+
+    try:
+        if args.reauth:
+            get_session()
+            log.info("Spotify re-authentication complete.")
+        elif args.rfid:
+            get_session()
+            run_rfid_loop()
+        elif args.song and args.artist:
+            get_session()
+            search_song(args.song, args.artist)
+        elif args.track:
+            get_session()
+            if args.play:
+                play_song(args.track)
+            else:
+                track_uri = normalize_spotify_uri(args.track)
+                track = get_session().call(
+                    lambda sp: sp.track(track_uri.rsplit(":", maxsplit=1)[-1])
+                )
+                display_track_info(track)
+        elif args.playlist:
+            get_session()
+            if args.random:
+                enable_shuffle()
+            search_playlist(args.playlist)
         else:
-            track_uri = normalize_spotify_uri(args.track)
-            track = session.call(lambda sp: sp.track(track_uri.rsplit(":", maxsplit=1)[-1]))
-            display_track_info(track)
-    elif args.playlist:
-        if args.random:
-            enable_shuffle()
-        search_playlist(args.playlist)
-    else:
-        print("Provide --rfid, --reauth, --track, or --song/--artist, or --playlist.")
+            print("Provide --rfid, --reauth, --track, or --song/--artist, or --playlist.")
+    except Exception as exc:
+        fail_service(f"Jukebox service failed to start: {exc}", exc)
+
+
+if __name__ == "__main__":
+    main()
