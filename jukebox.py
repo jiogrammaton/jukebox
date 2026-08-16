@@ -1,20 +1,29 @@
 import argparse
 import random
+import re
 from pathlib import Path
 from time import sleep
 
 from mfrc522 import SimpleMFRC522
 import RPi.GPIO as GPIO
+from spotipy.exceptions import SpotifyException
 
 from rfid_mapping import RFID_MAPPING
 from spotify_auth import REAUTH_COMMAND, create_session
 
 APP_DIR = Path(__file__).resolve().parent
+SPOTIFY_URI_RE = re.compile(
+    r"^spotify:(?P<kind>track|playlist|album|artist):(?P<id>[A-Za-z0-9]+)$"
+)
+OPEN_SPOTIFY_RE = re.compile(
+    r"https?://open\.spotify\.com/(?P<kind>track|playlist|album|artist)/(?P<id>[A-Za-z0-9]+)"
+)
 
 parser = argparse.ArgumentParser(description="Spotify jukebox controlled by RFID tags")
 parser.add_argument("--song", "-s", help="The name of the song")
 parser.add_argument("--artist", "-a", help="The name of the artist")
 parser.add_argument("--playlist", "-l", help="The name of the playlist")
+parser.add_argument("--track", "-t", help="Spotify track ID or URI to play")
 parser.add_argument("--play", "-p", action="store_true", help="Play track or playlist")
 parser.add_argument("--random", "-r", action="store_true", help="Randomize/shuffle tracks")
 parser.add_argument("--rfid", action="store_true", help="Enable RFID mode for scanning cards")
@@ -32,15 +41,44 @@ session = create_session(
 )
 
 
-def check_active_device():
+def normalize_spotify_uri(value: str) -> str:
+    value = value.strip()
+    if value.startswith("spotify:"):
+        return value
+
+    match = OPEN_SPOTIFY_RE.match(value)
+    if match:
+        kind = match.group("kind")
+        track_id = match.group("id")
+        return f"spotify:{kind}:{track_id}"
+
+    if re.fullmatch(r"[A-Za-z0-9]+", value):
+        return f"spotify:track:{value}"
+
+    raise ValueError(
+        f"Invalid Spotify URI or ID: {value}. "
+        "Use spotify:track:..., a track ID, or an open.spotify.com URL."
+    )
+
+
+def uri_kind(uri: str) -> str:
+    match = SPOTIFY_URI_RE.match(uri)
+    if match:
+        return match.group("kind")
+
+    raise ValueError(f"Unsupported Spotify URI format: {uri}")
+
+
+def get_active_device_id():
     devices = session.call(lambda sp: sp.devices())
     if not devices["devices"]:
-        print(
-            "No active device found. Open Spotify on a phone, desktop, "
-            "or speaker and start playback once so it becomes available."
-        )
-        return False
-    return True
+        return None
+
+    for device in devices["devices"]:
+        if device.get("is_active"):
+            return device["id"]
+
+    return devices["devices"][0]["id"]
 
 
 def display_track_info(track):
@@ -52,10 +90,60 @@ def display_track_info(track):
         print("-" * 50)
 
 
+def check_active_device():
+    device_id = get_active_device_id()
+    if not device_id:
+        print(
+            "No active device found. Open Spotify on a phone, desktop, "
+            "or speaker and start playback once so it becomes available."
+        )
+        return False
+    return True
+
+
 def play_song(track_uri):
-    if check_active_device():
-        session.call(lambda sp: sp.start_playback(uris=[track_uri]))
-        print(f"Playing: {track_uri}")
+    track_uri = normalize_spotify_uri(track_uri)
+    if uri_kind(track_uri) != "track":
+        raise ValueError(f"Expected a track URI, got: {track_uri}")
+
+    device_id = get_active_device_id()
+    if not device_id:
+        print(
+            "No active device found. Open Spotify on a phone, desktop, "
+            "or speaker and start playback once so it becomes available."
+        )
+        return
+
+    track_id = track_uri.rsplit(":", maxsplit=1)[-1]
+
+    try:
+        session.call(
+            lambda sp: sp.start_playback(
+                uris=[track_uri],
+                device_id=device_id,
+            )
+        )
+        print(f"Playing track: {track_uri}")
+        return
+    except SpotifyException as exc:
+        print(f"Direct track playback failed: {exc}")
+
+    try:
+        track = session.call(lambda sp: sp.track(track_id))
+        album_uri = track["album"]["uri"]
+        session.call(
+            lambda sp: sp.start_playback(
+                context_uri=album_uri,
+                offset={"uri": track_uri},
+                device_id=device_id,
+            )
+        )
+        print(
+            f"Playing track via album context: "
+            f"{track['name']} by {track['artists'][0]['name']}"
+        )
+    except SpotifyException as exc:
+        print(f"Failed to play track {track_uri}: {exc}")
 
 
 def play_playlist(playlist_uri):
@@ -147,19 +235,27 @@ def run_rfid_loop():
     try:
         while True:
             print("Waiting for RFID scan...")
-            scanned_id = reader.read()[0]
+            scanned_id = reader.read_id()
             print(f"Scanned RFID UID: {scanned_id}")
 
             uri = RFID_MAPPING.get(scanned_id)
             if uri:
                 try:
-                    if "track" in uri:
-                        play_song(uri)
+                    normalized_uri = normalize_spotify_uri(uri)
+                    kind = uri_kind(normalized_uri)
+                    print(f"Mapped to {kind}: {normalized_uri}")
+                    if kind == "track":
+                        play_song(normalized_uri)
+                    elif kind == "playlist":
+                        play_playlist(normalized_uri)
                     else:
-                        play_playlist(uri)
-                except RuntimeError as exc:
+                        print(f"Unsupported mapped URI type '{kind}': {normalized_uri}")
+                except (RuntimeError, ValueError) as exc:
                     print(exc)
-                    print(f"Playback paused until you run: {REAUTH_COMMAND}")
+                    if isinstance(exc, RuntimeError):
+                        print(f"Playback paused until you run: {REAUTH_COMMAND}")
+                except SpotifyException as exc:
+                    print(f"Spotify playback failed: {exc}")
             else:
                 print(f"No playlist mapped for RFID: {scanned_id}")
 
@@ -180,9 +276,16 @@ if __name__ == "__main__":
         run_rfid_loop()
     elif args.song and args.artist:
         search_song(args.song, args.artist)
+    elif args.track:
+        if args.play:
+            play_song(args.track)
+        else:
+            track_uri = normalize_spotify_uri(args.track)
+            track = session.call(lambda sp: sp.track(track_uri.rsplit(":", maxsplit=1)[-1]))
+            display_track_info(track)
     elif args.playlist:
         if args.random:
             enable_shuffle()
         search_playlist(args.playlist)
     else:
-        print("Provide --rfid, --reauth, or --song/--artist, or --playlist.")
+        print("Provide --rfid, --reauth, --track, or --song/--artist, or --playlist.")
