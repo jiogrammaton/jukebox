@@ -10,6 +10,7 @@ Inspired by [A Modern Day Record Player](https://talaexe.com/moderndayrecordplay
 jukebox/
 ├── jukebox.py           # Entry point (CLI + RFID loop)
 ├── spotify_auth.py      # OAuth, token refresh, invalid_grant recovery
+├── jukebox_log.py       # File logging to /var/log/jukebox/scan.log
 ├── rfid_mapping.py      # RFID UID → Spotify URI map
 ├── requirements.txt     # Python dependencies
 ├── .env.example         # Spotify API credentials template
@@ -68,6 +69,27 @@ When your refresh token expires (Spotify invalidates them after extended inactiv
 source .venv/bin/activate
 python jukebox.py --reauth
 ```
+
+## Logs
+
+RFID scans and playback events are written to `/var/log/jukebox/scan.log` with timestamps. Follow them with:
+
+```bash
+tail -f /var/log/jukebox/scan.log
+```
+
+Example lines:
+
+```
+2026-08-16 12:05:01 INFO Jukebox is ready. Tap a card to play music.
+2026-08-16 12:05:14 INFO Scanned RFID UID: 642352926973
+2026-08-16 12:05:14 INFO Mapped UID 642352926973 to track: spotify:track:4RVbK6cV0VqWdpCDcx3hiT
+2026-08-16 12:05:15 INFO Playing track: spotify:track:4RVbK6cV0VqWdpCDcx3hiT
+```
+
+The log rotates automatically at 5 MB (keeps 5 backups). Override the directory with `JUKEBOX_LOG_DIR` in `.env` or the systemd service.
+
+If `/var/log/jukebox` is not writable, logs fall back to `logs/scan.log` in the project directory.
 
 ## Troubleshooting startup
 

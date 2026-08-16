@@ -28,6 +28,11 @@ fi
 
 bash "$INSTALL_DIR/scripts/setup_venv.sh"
 
+LOG_DIR="/var/log/jukebox"
+mkdir -p "$LOG_DIR"
+chown "$SERVICE_USER:$SERVICE_USER" "$LOG_DIR"
+chmod 755 "$LOG_DIR"
+
 sed \
   -e "s|/home/jukebox/spotify|$INSTALL_DIR|g" \
   -e "s|User=jukebox|User=$SERVICE_USER|g" \
@@ -38,4 +43,5 @@ systemctl daemon-reload
 systemctl enable jukebox.service
 
 echo "Installed. Start with: systemctl start jukebox"
-echo "Logs: journalctl -u jukebox -f"
+echo "Logs: tail -f /var/log/jukebox/scan.log"
+echo "      journalctl -u jukebox -f"

@@ -8,10 +8,12 @@ from mfrc522 import SimpleMFRC522
 import RPi.GPIO as GPIO
 from spotipy.exceptions import SpotifyException
 
+from jukebox_log import setup_logging
 from rfid_mapping import RFID_MAPPING
 from spotify_auth import REAUTH_COMMAND, create_session
 
 APP_DIR = Path(__file__).resolve().parent
+log = setup_logging()
 SPOTIFY_URI_RE = re.compile(
     r"^spotify:(?P<kind>track|playlist|album|artist):(?P<id>[A-Za-z0-9]+)$"
 )
@@ -93,7 +95,7 @@ def display_track_info(track):
 def check_active_device():
     device_id = get_active_device_id()
     if not device_id:
-        print(
+        log.warning(
             "No active device found. Open Spotify on a phone, desktop, "
             "or speaker and start playback once so it becomes available."
         )
@@ -108,7 +110,7 @@ def play_song(track_uri):
 
     device_id = get_active_device_id()
     if not device_id:
-        print(
+        log.warning(
             "No active device found. Open Spotify on a phone, desktop, "
             "or speaker and start playback once so it becomes available."
         )
@@ -123,10 +125,10 @@ def play_song(track_uri):
                 device_id=device_id,
             )
         )
-        print(f"Playing track: {track_uri}")
+        log.info("Playing track: %s", track_uri)
         return
     except SpotifyException as exc:
-        print(f"Direct track playback failed: {exc}")
+        log.warning("Direct track playback failed: %s", exc)
 
     try:
         track = session.call(lambda sp: sp.track(track_id))
@@ -138,12 +140,13 @@ def play_song(track_uri):
                 device_id=device_id,
             )
         )
-        print(
-            f"Playing track via album context: "
-            f"{track['name']} by {track['artists'][0]['name']}"
+        log.info(
+            "Playing track via album context: %s by %s",
+            track["name"],
+            track["artists"][0]["name"],
         )
     except SpotifyException as exc:
-        print(f"Failed to play track {track_uri}: {exc}")
+        log.error("Failed to play track %s: %s", track_uri, exc)
 
 
 def play_playlist(playlist_uri):
@@ -154,15 +157,15 @@ def play_playlist(playlist_uri):
 
         if args.random:
             session.call(lambda sp: sp.shuffle(state=True))
-            print("Shuffle mode enabled.")
+            log.info("Shuffle mode enabled.")
             random_track_uri = random.choice(track_uris)
-            print(f"Random track selected: {random_track_uri}")
+            log.info("Random track selected: %s", random_track_uri)
             session.call(lambda sp: sp.start_playback(context_uri=playlist_uri))
-            print(f"Playing playlist: {playlist_uri} starting from a random track")
+            log.info("Playing playlist: %s starting from a random track", playlist_uri)
         else:
-            print("Shuffle mode disabled.")
+            log.info("Shuffle mode disabled.")
             session.call(lambda sp: sp.start_playback(context_uri=playlist_uri))
-            print(f"Playing playlist: {playlist_uri} starting from the first track")
+            log.info("Playing playlist: %s starting from the first track", playlist_uri)
 
 
 def enable_shuffle():
@@ -230,40 +233,44 @@ def display_playlist_tracks(playlist_id):
 def run_rfid_loop():
     reader = SimpleMFRC522()
 
-    print("Jukebox is ready. Tap a card to play music.")
+    log.info("Jukebox is ready. Tap a card to play music.")
 
     try:
         while True:
-            print("Waiting for RFID scan...")
+            log.debug("Waiting for RFID scan...")
             scanned_id = reader.read_id()
-            print(f"Scanned RFID UID: {scanned_id}")
+            log.info("Scanned RFID UID: %s", scanned_id)
 
             uri = RFID_MAPPING.get(scanned_id)
             if uri:
                 try:
                     normalized_uri = normalize_spotify_uri(uri)
                     kind = uri_kind(normalized_uri)
-                    print(f"Mapped to {kind}: {normalized_uri}")
+                    log.info("Mapped UID %s to %s: %s", scanned_id, kind, normalized_uri)
                     if kind == "track":
                         play_song(normalized_uri)
                     elif kind == "playlist":
                         play_playlist(normalized_uri)
                     else:
-                        print(f"Unsupported mapped URI type '{kind}': {normalized_uri}")
+                        log.error(
+                            "Unsupported mapped URI type '%s': %s",
+                            kind,
+                            normalized_uri,
+                        )
                 except (RuntimeError, ValueError) as exc:
-                    print(exc)
+                    log.error("%s", exc)
                     if isinstance(exc, RuntimeError):
-                        print(f"Playback paused until you run: {REAUTH_COMMAND}")
+                        log.error("Playback paused until you run: %s", REAUTH_COMMAND)
                 except SpotifyException as exc:
-                    print(f"Spotify playback failed: {exc}")
+                    log.error("Spotify playback failed: %s", exc)
             else:
-                print(f"No playlist mapped for RFID: {scanned_id}")
+                log.warning("No mapping found for RFID UID: %s", scanned_id)
 
             sleep(1)
     except KeyboardInterrupt:
-        print("\nExiting RFID jukebox.")
+        log.info("Exiting RFID jukebox.")
     except Exception as e:
-        print(f"Unhandled error: {e}")
+        log.exception("Unhandled error: %s", e)
         raise
     finally:
         GPIO.cleanup()
