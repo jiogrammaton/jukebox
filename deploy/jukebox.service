@@ -10,7 +10,7 @@ Group=jukebox
 WorkingDirectory=/home/jukebox/spotify
 EnvironmentFile=/home/jukebox/spotify/.env
 Environment="PATH=/home/jukebox/spotify/.venv/bin:/usr/local/bin:/usr/bin"
-Environment="logging_DIR=/var/log/jukebox"
+Environment="JUKEBOX_LOG_DIR=/var/log/jukebox"
 ExecStart=/home/jukebox/spotify/.venv/bin/python /home/jukebox/spotify/jukebox.py --rfid
 Restart=on-failure
 RestartSec=10

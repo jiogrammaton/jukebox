@@ -8,7 +8,7 @@ from mfrc522 import SimpleMFRC522
 import RPi.GPIO as GPIO
 from spotipy.exceptions import SpotifyException
 
-from logging import setup_logging
+from logger import setup_logging
 from rfid_mapping import RFID_MAPPING
 from spotify_auth import REAUTH_COMMAND, create_session
 

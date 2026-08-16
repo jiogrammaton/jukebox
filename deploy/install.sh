@@ -21,6 +21,7 @@ fi
 
 mkdir -p "$INSTALL_DIR"
 rsync -a --exclude '.git' --exclude '.venv' "$REPO_ROOT/" "$INSTALL_DIR/"
+rm -f "$INSTALL_DIR/logging.py" "$INSTALL_DIR/jukebox_log.py"
 
 if [[ ! -f "$INSTALL_DIR/.env" ]]; then
   echo "Create $INSTALL_DIR/.env from .env.example before starting the service."
