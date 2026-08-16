@@ -10,7 +10,7 @@ Inspired by [A Modern Day Record Player](https://talaexe.com/moderndayrecordplay
 jukebox/
 ├── jukebox.py           # Entry point (CLI + RFID loop)
 ├── spotify_auth.py      # OAuth, token refresh, invalid_grant recovery
-├── jukebox_log.py       # File logging to /var/log/jukebox/scan.log
+├── logging.py       # File logging to /var/log/jukebox/scan.log
 ├── rfid_mapping.py      # RFID UID → Spotify URI map
 ├── requirements.txt     # Python dependencies
 ├── .env.example         # Spotify API credentials template
@@ -87,7 +87,7 @@ Example lines:
 2026-08-16 12:05:15 INFO Playing track: spotify:track:4RVbK6cV0VqWdpCDcx3hiT
 ```
 
-The log rotates automatically at 5 MB (keeps 5 backups). Override the directory with `JUKEBOX_LOG_DIR` in `.env` or the systemd service.
+The log rotates automatically at 5 MB (keeps 5 backups). Override the directory with `logging_DIR` in `.env` or the systemd service.
 
 If `/var/log/jukebox` is not writable, logs fall back to `logs/scan.log` in the project directory.
 

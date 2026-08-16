@@ -21,7 +21,7 @@ def _resolve_log_dir(log_dir: Path | None) -> Path:
     if log_dir is not None:
         return log_dir
 
-    env_dir = os.environ.get("JUKEBOX_LOG_DIR")
+    env_dir = os.environ.get("logging_DIR")
     if env_dir:
         return Path(env_dir)
 
