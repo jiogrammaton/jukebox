@@ -82,6 +82,8 @@ Common issues:
 - **Invalid authorization code** — you pasted the sign-in URL instead of the redirect URL. Paste the URL from your browser after approving access (`http://127.0.0.1:8888/callback?code=...`).
 - **Service exits immediately** — the service must pass `--rfid`. Without it the script prints a usage message and exits.
 - **Spotify auth fails** — ensure `.env` exists and `.cache` is present. If the refresh token expired, run `python jukebox.py --reauth`.
+- **AUTH ERROR in logs** — your tag is likely an NTAG sticker, not MIFARE Classic. The jukebox only needs the tag UID, so it uses `read_id()` instead of `read()` to skip card authentication. Pull the latest code and restart the service.
+- **Tag not recognized** — check `journalctl -u jukebox -f` for the scanned UID and add that exact number to `rfid_mapping.py` (do not guess from what's printed on the sticker).
 - **RFID reader not found** — the `jukebox` user needs access to SPI/GPIO (`spi`, `gpio` groups on Raspberry Pi OS).
 - **No playback device** — open Spotify on a phone or speaker once so an active device is available.
 
@@ -89,6 +91,6 @@ Common issues:
 
 ```bash
 python jukebox.py --song "Song Name" --artist "Artist" --play
-python jukebox.py --playlist 4Oyvo936CnKDtdLQiPfIOV --play
+python jukebox.py --track 4RVbK6cV0VqWdpCDcx3hiT --play
 python jukebox.py --playlist 4Oyvo936CnKDtdLQiPfIOV --play --random
 ```

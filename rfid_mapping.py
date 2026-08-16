@@ -40,4 +40,5 @@ RFID_MAPPING = {
     433877799057: "spotify:playlist:6LJDvzNjWOJywqIgreRp1o",  # Mclovin
     915752996883: "spotify:playlist:0FsnnD73T6hgxbjO1VTj0i",  # Feel Good Dance
     435578653761: "spotify:track:4yK3xXuNrkSq0OVjKUaCkY",     # Lights Out
+    642352926973: "spotify:track:4RVbK6cV0VqWdpCDcx3hiT",     # Reborn
 }
