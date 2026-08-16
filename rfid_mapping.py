@@ -1,4 +1,4 @@
-# RFID UID -> Spotify URI (playlist or track).
+# RFID UID -> Spotify URI (playlist, album, or track).
 # Note: 778165473293 is mapped twice in the original list; only the last entry wins in a dict.
 
 RFID_MAPPING = {

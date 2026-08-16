@@ -157,6 +157,37 @@ def play_song(track_uri):
         log.error("Failed to play track %s: %s", track_uri, exc)
 
 
+def play_album(album_uri):
+    if not check_active_device():
+        return
+
+    album_id = album_uri.rsplit(":", maxsplit=1)[-1]
+    album = get_session().call(lambda sp: sp.album(album_id))
+    get_session().call(lambda sp: sp.shuffle(state=False))
+
+    if args.random:
+        tracks = get_session().call(lambda sp: sp.album_tracks(album_id))
+        track_uris = [item["uri"] for item in tracks["items"]]
+        get_session().call(lambda sp: sp.shuffle(state=True))
+        log.info("Shuffle mode enabled.")
+        random_track_uri = random.choice(track_uris)
+        log.info("Random track selected: %s", random_track_uri)
+        get_session().call(
+            lambda sp: sp.start_playback(
+                context_uri=album_uri,
+                offset={"uri": random_track_uri},
+            )
+        )
+        log.info(
+            "Playing album: %s (%s) starting from a random track",
+            album["name"],
+            album_uri,
+        )
+    else:
+        get_session().call(lambda sp: sp.start_playback(context_uri=album_uri))
+        log.info("Playing album: %s (%s) from the first track", album["name"], album_uri)
+
+
 def play_playlist(playlist_uri):
     if check_active_device():
         playlist_tracks = get_session().call(lambda sp: sp.playlist_tracks(playlist_uri))
@@ -268,6 +299,8 @@ def run_rfid_loop():
                         play_song(normalized_uri)
                     elif kind == "playlist":
                         play_playlist(normalized_uri)
+                    elif kind == "album":
+                        play_album(normalized_uri)
                     else:
                         log.error(
                             "Unsupported mapped URI type '%s': %s",
