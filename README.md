@@ -4,14 +4,14 @@ Play music through Spotify by scanning RFID tags on a Raspberry Pi.
 
 Inspired by [A Modern Day Record Player](https://talaexe.com/moderndayrecordplayer) by @talaexe.
 
-## Repository layout
+## Repository Layout
 
 ```
 jukebox/
-├── jukebox.py           # Entry point (CLI + RFID loop)
-├── spotify_auth.py      # OAuth, token refresh, invalid_grant recovery
-├── logger.py            # File logging to /var/log/jukebox/scan.log
-├── rfid_mapping.py      # RFID UID → Spotify URI map
+├── jukebox.py           # Main execution script
+├── spotify_auth.py      # Token refresh and authentication 
+├── logger.py            # Handles logging to /var/log/jukebox/scan.log
+├── rfid_mapping.py      # RFID UID to Spotify URI map
 ├── requirements.txt     # Python dependencies
 ├── .env.example         # Spotify API credentials template
 ├── scripts/
@@ -21,7 +21,7 @@ jukebox/
     └── install.sh       # Copy app + enable service on the Pi
 ```
 
-## Raspberry Pi setup
+## Raspberry Pi Setup
 
 1. Clone or copy this repo to the Pi (default install path: `/home/jukebox/spotify`).
 2. Create credentials:
@@ -31,9 +31,9 @@ jukebox/
    ```
    In the [Spotify Developer Dashboard](https://developer.spotify.com/dashboard), open your app → Settings → Redirect URIs and add:
    ```
-   http://127.0.0.1:8888/callback
+   https://127.0.0.1:8888/callback
    ```
-   Remove any `localhost` URIs — Spotify no longer accepts them. The URI in `.env` must match exactly.
+   The URI in `.env` must match exactly.
 3. Install the virtualenv (once):
    ```bash
    bash scripts/setup_venv.sh
@@ -44,10 +44,10 @@ jukebox/
    python jukebox.py --reauth
    ```
    1. Open the printed URL in a browser and approve access.
-   2. After approving, your browser redirects to `http://127.0.0.1:8888/callback?code=...` — the page may fail to load; that is expected.
-   3. Copy the **full URL from your browser's address bar** (not the sign-in URL) and paste it into the terminal.
+   2. After approving, your browser redirects to `https://127.0.0.1:8888/callback?code=...` (the page will fail to load; that is expected.)
+   3. Copy the **full URL from your browser's address bar** and paste it into the terminal.
 
-   A `.cache` file is written in the project directory. Access tokens refresh automatically. If Spotify returns `invalid_grant`, discard happens automatically — run `--reauth` again.
+   A `.cache` file is written in the project directory. Access tokens refresh automatically. If Spotify returns `invalid_grant`, run `--reauth` again.
 5. Install and enable the systemd service:
    ```bash
    sudo bash deploy/install.sh
@@ -87,7 +87,7 @@ Example lines:
 2026-08-16 12:05:15 INFO Playing track: spotify:track:4RVbK6cV0VqWdpCDcx3hiT
 ```
 
-The log rotates automatically at 5 MB (keeps 5 backups). Override the directory with `JUKEBOX_LOG_DIR` in `.env` or the systemd service.
+The log rotates automatically at 5 MB (keeps 5 backups). Override the directory with `LOG_DIR` in `.env` or the systemd service.
 
 If `/var/log/jukebox` is not writable, logs fall back to `logs/scan.log` in the project directory.
 
@@ -100,8 +100,7 @@ journalctl -u jukebox -b --no-pager
 
 Common issues:
 
-- **Repeating log lines with no error** — the service is crash-looping before errors were flushed to disk. Pull the latest code; failures now log `Jukebox service failed to start:` with a full traceback in `scan.log`. Also confirm `.cache` exists after reinstall.
-- **redirect_uri issues** — `SPOTIPY_REDIRECT_URI` must match your Spotify app settings exactly (including `http` vs `https` and trailing slash). Do not use `localhost`; use `127.0.0.1`.
+- **redirect_uri: Insecure** — update `.env` to `http://127.0.0.1:8888/callback` and add the same URI in your Spotify app settings. Do not use `localhost` or `https://localhost`.
 - **Invalid authorization code** — you pasted the sign-in URL instead of the redirect URL. Paste the URL from your browser after approving access (`http://127.0.0.1:8888/callback?code=...`).
 - **Service exits immediately** — the service must pass `--rfid`. Without it the script prints a usage message and exits.
 - **Spotify auth fails** — ensure `.env` exists and `.cache` is present. If the refresh token expired, run `python jukebox.py --reauth`.

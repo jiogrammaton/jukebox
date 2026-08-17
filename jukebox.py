@@ -22,7 +22,7 @@ OPEN_SPOTIFY_RE = re.compile(
     r"https?://open\.spotify\.com/(?P<kind>track|playlist|album|artist)/(?P<id>[A-Za-z0-9]+)"
 )
 
-parser = argparse.ArgumentParser(description="Spotify jukebox controlled by RFID tags")
+parser = argparse.ArgumentParser(description="Spotify jukebox controlled by scanning RFID tags")
 parser.add_argument("--song", "-s", help="The name of the song")
 parser.add_argument("--artist", "-a", help="The name of the artist")
 parser.add_argument("--playlist", "-l", help="The name of the playlist")

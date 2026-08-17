@@ -1,5 +1,4 @@
-# RFID UID -> Spotify URI (playlist, album, or track).
-# Note: 778165473293 is mapped twice in the original list; only the last entry wins in a dict.
+# RFID UID -> Spotify URI (playlist, track, or album).
 
 RFID_MAPPING = {
     91590545582: "spotify:playlist:4Oyvo936CnKDtdLQiPfIOV",   # The Journey
@@ -13,11 +12,11 @@ RFID_MAPPING = {
     434717905078: "spotify:playlist:6ZrEVYORdHUDVP8hsmiPxZ",  # Zonin
     640676253737: "spotify:playlist:0322hJQHKZNuDABAtM6naO",  # Suspicious
     778970845308: "spotify:playlist:3hZVRZRHClp1nsrDvzI96J",  # Nostalgic Angst
-    847723810867: "spotify:playlist:7qreRbH2mPhdR4XhGr0egH",  # J.J
-    778165473293: "spotify:playlist:55QMVtqpFTQJM5HiJKf2YF",  # Blissful Mornings (was also Past Life)
-    160445092075: "spotify:playlist:0MpprStq0YrdoVhIHkCGGt",  # Fuck Yeah
-    366502858901: "spotify:playlist:2KlRTd2wRd3cczeZ8ai79F",  # See
-    777947303937: "spotify:playlist:3hTHOAi2nfU4RU4wW2WjVJ",  # Jose
+    778165473293: "spotify:playlist:5gjo43kbo4KYcKVm327QKH",  # Past Life
+    366502858901: "spotify:playlist:0MpprStq0YrdoVhIHkCGGt",  # Fuck Yeah
+    160445092075: "spotify:playlist:55QMVtqpFTQJM5HiJKf2YF",  # Blissful Mornings
+    159707025565: "spotify:playlist:3hTHOAi2nfU4RU4wW2WjVJ",  # Jose
+    777947303937: "spotify:playlist:2KlRTd2wRd3cczeZ8ai79F",  # See
     434568220883: "spotify:playlist:5iPSurC6eXQJe3Uf0ZnxCU",  # Muddy
     231748653147: "spotify:playlist:4ocUhBVib0KePTumimFSn6",  # Dancing in the Snow
     575513743584: "spotify:playlist:176i1RCZ02h6tWQjwOQbNN",  # Slow Dance
@@ -39,6 +38,14 @@ RFID_MAPPING = {
     984338190394: "spotify:playlist:5Um3W2uXtJKSnWOhUtWDTw",  # Yearning for Love
     433877799057: "spotify:playlist:6LJDvzNjWOJywqIgreRp1o",  # Mclovin
     915752996883: "spotify:playlist:0FsnnD73T6hgxbjO1VTj0i",  # Feel Good Dance
-    435578653761: "spotify:track:4yK3xXuNrkSq0OVjKUaCkY",     # Lights Out
     642352926973: "spotify:track:4RVbK6cV0VqWdpCDcx3hiT",     # Reborn
+    436149013668: "spotify:album:4eLPsYPBmXABThSJ821sqY",     # DAMN
+    91511442454: "spotify:album:213E5Pv82IzYswH8HaGF8u",      # logos
+    504499326031: "spotify:album:3DGQ1iZ9XKUQxAUWjfC34w",     # Good Kid Maad City
+    92098579496: "spotify:album:7ppFvYZDtSfWybKLtCPlOO",      # Field Division
+    572111506685: "spotify:album:4JtIVJRA342O0YoAchen5Q",     # Minutes to Midnight
+    572698643553: "spotify:album:0bUTHlWbkSQysoM3VsWldT",     # Demon Days
+    640377932863: "spotify:album:7KMW0YBACoqnHpOxjSyRlE",     # Motley Crue Greatest Hits
+    1052594130005: "spotify:album:0Cuqhgy8vm96JEkBY3polk",    # Titanic Rising
+    91108592785: "spotify:album:7Ln81p86r5cCsesd3KBWIY",      # Dragon New Warm Mountain I Believe In You
 }
