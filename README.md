@@ -25,19 +25,21 @@ jukebox/
 ## Prerequisites
 You must have the following:
 - RFID RC522 Module
-https://www.amazon.com/dp/B07KGBJ9VG
+https://amzn.to/3RWqQxf
 
 - RFID Stickers (13.56MHz) 
-https://www.amazon.com/dp/B01LYZ121B
+https://amzn.to/4cFJyjt
 
 - Raspberry Pi 4 
-https://www.amazon.com/dp/B07TKFKKMP
+https://amzn.to/4wwIgOY
 
 - SD card for Raspberry Pi
-https://www.amazon.com/dp/B09X7C7LL1
+https://amzn.to/4wAisBB
 
 - Female to Female Dupont Jumper Wires 
-https://www.amazon.com/dp/B09FP74HVH
+https://amzn.to/4xD80tS
+
+> I get a small commission if you choose to purchase using the above Amazon affiliate links. 
 
 ## Setup
 
