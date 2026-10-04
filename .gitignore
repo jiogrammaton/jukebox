@@ -1,4 +1,4 @@
-# Spotify OAuth token cache (created automatically; do not commit)
 .cache
 .env
 .venv/
+logs/

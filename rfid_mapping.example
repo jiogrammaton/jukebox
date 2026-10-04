@@ -1,0 +1,5 @@
+# RFID UID -> Spotify URI (playlist, track, or album).
+
+RFID_MAPPING = {
+    572698643553: "spotify:album:0bUTHlWbkSQysoM3VsWldT",     # Demon Days
+}
