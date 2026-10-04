@@ -23,7 +23,7 @@ jukebox/
 ```
 
 ## Prerequisites
-You must have the following:
+You must have the following products:
 - RFID RC522 Module
 https://amzn.to/3RWqQxf
 
@@ -47,7 +47,7 @@ https://amzn.to/4xD80tS
 2. Create mappings
    1. Copy mapping example
       ``` bash
-      cp rfid_mapping.example rfid_example.py
+      cp rfid_mapping.example rfid_mapping.py
    2. Activate python virtual environment
       ``` bash
       source .venv/bin/activate
